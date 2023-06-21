@@ -44,7 +44,7 @@ type httpClient struct {
 	get    ServiceCall
 }
 
-func NewInsecureClient(token string) *httpClient {
+func NewInsecureClient() *httpClient {
 	return &httpClient{
 		client: &http.Client{},
 		post:   post,
