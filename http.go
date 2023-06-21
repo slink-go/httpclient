@@ -44,7 +44,14 @@ type httpClient struct {
 	get    ServiceCall
 }
 
-func ClientBuilder(token string) *httpClient {
+func NewInsecureClient(token string) *httpClient {
+	return &httpClient{
+		client: &http.Client{},
+		post:   post,
+		get:    get,
+	}
+}
+func NewTokenAuthClient(token string) *httpClient {
 	return &httpClient{
 		client: &http.Client{
 			Transport: authProxy{
