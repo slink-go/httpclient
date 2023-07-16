@@ -76,13 +76,13 @@ func (c *HttpClient) SkipTlsVerify() *HttpClient {
 	}
 	return c
 }
-func (c *HttpClient) WithNoAuthClient() *HttpClient {
+func (c *HttpClient) WithNoAuth() *HttpClient {
 	c.client = &http.Client{
 		Transport: c.transport,
 	}
 	return c
 }
-func (c *HttpClient) WithBasicAuthClient(login, password string) *HttpClient {
+func (c *HttpClient) WithBasicAuth(login, password string) *HttpClient {
 	c.client = &http.Client{
 		Transport: basicAuthProxy{
 			Transport: c.transport,
@@ -92,7 +92,7 @@ func (c *HttpClient) WithBasicAuthClient(login, password string) *HttpClient {
 	}
 	return c
 }
-func (c *HttpClient) WithTokenAuthClient(token string) *HttpClient {
+func (c *HttpClient) WithBearerAuth(token string) *HttpClient {
 	c.client = &http.Client{
 		Transport: tokenAuthProxy{
 			Transport: c.transport,
