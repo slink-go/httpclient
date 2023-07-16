@@ -3,6 +3,7 @@ package httpclient
 import (
 	"bytes"
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -63,12 +64,37 @@ func NewInsecureClient() *httpClient {
 		get:    get,
 	}
 }
+func NewInsecureClientSkipTlsVerify() *httpClient {
+	return &httpClient{
+		client: &http.Client{
+			Transport: &http.Transport{
+				TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+			},
+		},
+		post: post,
+		get:  get,
+	}
+}
 func NewTokenAuthClient(token string) *httpClient {
 	return &httpClient{
 		client: &http.Client{
 			Transport: authProxy{
 				Transport: http.DefaultTransport,
 				Token:     token,
+			},
+		},
+		post: post,
+		get:  get,
+	}
+}
+func NewTokenAuthClientSkipTlsVerify(token string) *httpClient {
+	return &httpClient{
+		client: &http.Client{
+			Transport: authProxy{
+				Transport: &http.Transport{
+					TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+				},
+				Token: token,
 			},
 		},
 		post: post,
