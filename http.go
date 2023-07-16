@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/tls"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -52,54 +53,53 @@ type Client interface {
 // region - http client implementation
 
 type HttpClient struct {
-	client *http.Client
-	post   ServiceCall
-	get    ServiceCall
+	client    *http.Client
+	transport http.RoundTripper
+	post      ServiceCall
+	get       ServiceCall
 }
 
-func NewInsecureClient() *HttpClient {
+func New() *HttpClient {
 	return &HttpClient{
-		client: &http.Client{},
-		post:   post,
-		get:    get,
+		client:    nil,
+		transport: http.DefaultTransport,
+		post:      post,
+		get:       get,
 	}
 }
-func NewInsecureClientSkipTlsVerify() *HttpClient {
-	return &HttpClient{
-		client: &http.Client{
-			Transport: &http.Transport{
-				TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-			},
-		},
-		post: post,
-		get:  get,
+func (c *HttpClient) SkipTlsVerify() *HttpClient {
+	if c.client != nil {
+		panic(errors.New("SkipTlsVerify() should be called first in a client configuration chain"))
 	}
+	c.transport = &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}
+	return c
 }
-func NewTokenAuthClient(token string) *HttpClient {
-	return &HttpClient{
-		client: &http.Client{
-			Transport: authProxy{
-				Transport: http.DefaultTransport,
-				Token:     token,
-			},
-		},
-		post: post,
-		get:  get,
+func (c *HttpClient) WithNoAuthClient() *HttpClient {
+	c.client = &http.Client{
+		Transport: c.transport,
 	}
+	return c
 }
-func NewTokenAuthClientSkipTlsVerify(token string) *HttpClient {
-	return &HttpClient{
-		client: &http.Client{
-			Transport: authProxy{
-				Transport: &http.Transport{
-					TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-				},
-				Token: token,
-			},
+func (c *HttpClient) WithBasicAuthClient(login, password string) *HttpClient {
+	c.client = &http.Client{
+		Transport: basicAuthProxy{
+			Transport: c.transport,
+			Login:     login,
+			Password:  password,
 		},
-		post: post,
-		get:  get,
 	}
+	return c
+}
+func (c *HttpClient) WithTokenAuthClient(token string) *HttpClient {
+	c.client = &http.Client{
+		Transport: tokenAuthProxy{
+			Transport: c.transport,
+			Token:     token,
+		},
+	}
+	return c
 }
 
 func (c *HttpClient) WithTimeout(timeout time.Duration) *HttpClient {
@@ -148,20 +148,38 @@ func (c *HttpClient) handleError(err error) error {
 // endregion
 // region - auth proxy
 
-type authProxy struct {
+type tokenAuthProxy struct {
 	Transport http.RoundTripper
 	Token     string
 }
 
-func (ap authProxy) RoundTrip(request *http.Request) (response *http.Response, e error) {
+func (ap tokenAuthProxy) RoundTrip(request *http.Request) (response *http.Response, e error) {
 	if request.Header.Get(authHeader) == "" {
 		request.Header.Set(authHeader, ap.bearerToken())
 	}
 	response, e = ap.Transport.RoundTrip(request)
 	return
 }
-func (ap authProxy) bearerToken() string {
+func (ap tokenAuthProxy) bearerToken() string {
 	return fmt.Sprintf("Bearer %s", ap.Token)
+}
+
+type basicAuthProxy struct {
+	Transport http.RoundTripper
+	Login     string
+	Password  string
+}
+
+func (ap basicAuthProxy) RoundTrip(request *http.Request) (response *http.Response, e error) {
+	if request.Header.Get(authHeader) == "" {
+		request.Header.Set(authHeader, ap.basicAuth())
+	}
+	response, e = ap.Transport.RoundTrip(request)
+	return
+}
+func (ap basicAuthProxy) basicAuth() string {
+	auth := ap.Login + ":" + ap.Password
+	return fmt.Sprintf("Basic %s", base64.StdEncoding.EncodeToString([]byte(auth)))
 }
 
 // endregion
@@ -445,3 +463,74 @@ func processErrorMsg(url, host, message, source string, code int) (int, error) {
 }
 
 // endregion
+
+//func NewInsecureClient() *HttpClient {
+//	return &HttpClient{
+//		client: &http.Client{},
+//		post:   post,
+//		get:    get,
+//	}
+//}
+//func NewInsecureClientSkipTlsVerify() *HttpClient {
+//	return &HttpClient{
+//		client: &http.Client{
+//			Transport: &http.Transport{
+//				TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+//			},
+//		},
+//		post: post,
+//		get:  get,
+//	}
+//}
+//func NewTokenAuthClient(token string) *HttpClient {
+//	return &HttpClient{
+//		client: &http.Client{
+//			Transport: authProxy{
+//				Transport: http.DefaultTransport,
+//				Token:     token,
+//			},
+//		},
+//		post: post,
+//		get:  get,
+//	}
+//}
+//func NewTokenAuthClientSkipTlsVerify(token string) *HttpClient {
+//	return &HttpClient{
+//		client: &http.Client{
+//			Transport: authProxy{
+//				Transport: &http.Transport{
+//					TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+//				},
+//				Token: token,
+//			},
+//		},
+//		post: post,
+//		get:  get,
+//	}
+//}
+//func NewBasicAuthClient(login, password string) *HttpClient {
+//	return &HttpClient{
+//		client: &http.Client{
+//			Transport: authProxy{
+//				Transport: http.DefaultTransport,
+//				Token:     token,
+//			},
+//		},
+//		post: post,
+//		get:  get,
+//	}
+//}
+//func NewBasicAuthClientSkipTlsVerify(login, password string) *HttpClient {
+//	return &HttpClient{
+//		client: &http.Client{
+//			Transport: authProxy{
+//				Transport: &http.Transport{
+//					TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+//				},
+//				Token: token,
+//			},
+//		},
+//		post: post,
+//		get:  get,
+//	}
+//}
