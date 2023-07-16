@@ -51,21 +51,21 @@ type Client interface {
 // endregion
 // region - http client implementation
 
-type httpClient struct {
+type HttpClient struct {
 	client *http.Client
 	post   ServiceCall
 	get    ServiceCall
 }
 
-func NewInsecureClient() *httpClient {
-	return &httpClient{
+func NewInsecureClient() *HttpClient {
+	return &HttpClient{
 		client: &http.Client{},
 		post:   post,
 		get:    get,
 	}
 }
-func NewInsecureClientSkipTlsVerify() *httpClient {
-	return &httpClient{
+func NewInsecureClientSkipTlsVerify() *HttpClient {
+	return &HttpClient{
 		client: &http.Client{
 			Transport: &http.Transport{
 				TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
@@ -75,8 +75,8 @@ func NewInsecureClientSkipTlsVerify() *httpClient {
 		get:  get,
 	}
 }
-func NewTokenAuthClient(token string) *httpClient {
-	return &httpClient{
+func NewTokenAuthClient(token string) *HttpClient {
+	return &HttpClient{
 		client: &http.Client{
 			Transport: authProxy{
 				Transport: http.DefaultTransport,
@@ -87,8 +87,8 @@ func NewTokenAuthClient(token string) *httpClient {
 		get:  get,
 	}
 }
-func NewTokenAuthClientSkipTlsVerify(token string) *httpClient {
-	return &httpClient{
+func NewTokenAuthClientSkipTlsVerify(token string) *HttpClient {
+	return &HttpClient{
 		client: &http.Client{
 			Transport: authProxy{
 				Transport: &http.Transport{
@@ -102,33 +102,33 @@ func NewTokenAuthClientSkipTlsVerify(token string) *httpClient {
 	}
 }
 
-func (c *httpClient) WithTimeout(timeout time.Duration) *httpClient {
+func (c *HttpClient) WithTimeout(timeout time.Duration) *HttpClient {
 	c.client.Timeout = timeout
 	return c
 }
-func (c *httpClient) WithBreaker(failureThreshold uint, initial, max time.Duration) *httpClient {
+func (c *HttpClient) WithBreaker(failureThreshold uint, initial, max time.Duration) *HttpClient {
 	c.post = withBreaker(c.post, failureThreshold, initial, max)
 	c.get = withBreaker(c.get, failureThreshold, initial, max)
 	return c
 }
-func (c *httpClient) WithRetry(retries uint, delay time.Duration) *httpClient {
+func (c *HttpClient) WithRetry(retries uint, delay time.Duration) *HttpClient {
 	c.post = withRetry(c.post, retries, delay)
 	c.get = withRetry(c.get, retries, delay)
 	return c
 }
 
-func (c *httpClient) Post(url string, args map[string]any, headers map[string]string) ([]byte, map[string]string, int, error) {
+func (c *HttpClient) Post(url string, args map[string]any, headers map[string]string) ([]byte, map[string]string, int, error) {
 	res, hdrs, code, err := c.post(c.client, context.Background(), url, args, headers)
 	err = c.handleError(err)
 	return res, hdrs, code, err
 }
-func (c *httpClient) Get(url string, args map[string]any, headers map[string]string) ([]byte, map[string]string, int, error) {
+func (c *HttpClient) Get(url string, args map[string]any, headers map[string]string) ([]byte, map[string]string, int, error) {
 	res, hdrs, code, err := c.get(c.client, context.Background(), url, args, headers)
 	err = c.handleError(err)
 	return res, hdrs, code, err
 }
 
-func (c *httpClient) handleError(err error) error {
+func (c *HttpClient) handleError(err error) error {
 	if err == nil {
 		return nil
 	}
