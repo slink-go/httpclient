@@ -8,7 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/slink-go/logger"
+	"github.com/slink-go/logging"
 	"io"
 	"math/rand"
 	"net/http"
@@ -304,7 +304,7 @@ func withRetry(call ServiceCall, retries uint, delay time.Duration) ServiceCall 
 			}
 			// add random jitter
 			wait = wait + time.Duration(rand.Intn(250))*time.Millisecond
-			logger.Debug("[retry] attempt %d failed; retying in %v", r+1, wait)
+			logging.GetLogger("http").Debug("[retry] attempt %d failed; retying in %v", r+1, wait)
 			select {
 			case <-time.After(wait):
 			case <-ctx.Done():
@@ -335,7 +335,7 @@ func withBreaker(call ServiceCall, failureThreshold uint, initialDelay, maxDelay
 			shouldRetryAt := lastAttempt.Add(wait)
 			if !time.Now().After(shouldRetryAt) {
 				m.RUnlock()
-				logger.Debug("[breaker] service unreachable; wait for %v", time.Duration(wait))
+				logging.GetLogger("http").Debug("[breaker] service unreachable; wait for %v", time.Duration(wait))
 				return nil, nil, http.StatusInternalServerError, BreakError{
 					Wait: time.Duration(wait),
 					// TODO: custom errors (?)
@@ -429,9 +429,9 @@ func processError(err error, code int) (int, error) {
 	}
 	parts := strings.Split(ms, ":")
 	ms = strings.TrimSpace(parts[len(parts)-1])
-	//logger.Warning("> parsed error: src=%s, mt=%s, pr=%s, h=%s, pa=%s, url=%s, ms=%s", err.Error(), mt, pr, h, pa, url, ms)
+	//logging.GetLogger("http").Warning("> parsed error: src=%s, mt=%s, pr=%s, h=%s, pa=%s, url=%s, ms=%s", err.Error(), mt, pr, h, pa, url, ms)
 	code, err = processErrorMsg(url, h, ms, err.Error(), code)
-	//logger.Warning("> processed error: %v", err)
+	//logging.GetLogger("http").Warning("> processed error: %v", err)
 	return code, err
 }
 func processErrorMsg(url, host, message, source string, code int) (int, error) {
