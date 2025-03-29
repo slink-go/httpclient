@@ -8,7 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/slink-go/logging"
+	"go.slink.ws/logging"
 	"io"
 	"math/rand"
 	"net/http"

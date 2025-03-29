@@ -1,10 +1,10 @@
-module github.com/slink-go/httpclient
+module go.slink.ws/httpclient
 
-go 1.22.3
+go 1.24.0
 
-toolchain go1.23.1
+toolchain go1.24.1
 
-require github.com/slink-go/logging v0.0.2
+require go.slink.ws/logging v0.0.5
 
 require (
 	github.com/mattn/go-colorable v0.1.13 // indirect
